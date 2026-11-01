@@ -137,6 +137,14 @@ const rpgChoices = [
   { korean: "티머니 카드가 어디예요?", vi: "Thẻ T-money ở đâu ạ?", delta: 5, tag: "Gần đúng", feedback: "Gần đúng! Câu này hỏi vị trí của thẻ, không phải yêu cầu mua. Nếu muốn mua, hãy dùng 하나 주세요.", good: true },
 ];
 
+const journeyStops = [
+  { id: "airport", step: "01", place: "Incheon Airport", title: "Land & say hello", goal: "Must know Korean: greetings", korean: "안녕하세요!", vi: "Xin chào!", status: "complete", accent: "mint" },
+  { id: "tmoney", step: "02", place: "Convenience Store", title: "Get your T-money", goal: "Buy a transit card", korean: "티머니 카드 하나 주세요.", vi: "Cho tôi một thẻ T-money.", status: "current", accent: "pink" },
+  { id: "food", step: "03", place: "Mangwon Market", title: "Taste Seoul", goal: "Must eat Korean fusion food", korean: "이거 하나 주세요.", vi: "Cho tôi một phần món này.", status: "open", accent: "coral" },
+  { id: "kpop", step: "04", place: "Hongdae", title: "Catch the K-pop vibe", goal: "Must know Korean: K-POP", korean: "사진 같이 찍어도 돼요?", vi: "Mình chụp ảnh cùng được không ạ?", status: "locked", accent: "violet" },
+  { id: "home", step: "05", place: "Seoul Station", title: "Find your way home", goal: "Ask for directions", korean: "서울역이 어디예요?", vi: "Ga Seoul ở đâu ạ?", status: "locked", accent: "blue" },
+];
+
 function classNames(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
@@ -183,6 +191,7 @@ function Home() {
   const [dramaId, setDramaId] = useState("cloy");
   const [energy, setEnergy] = useState(74);
   const [rpgStep, setRpgStep] = useState(0);
+  const [journeyStopId, setJourneyStopId] = useState("tmoney");
   const [rpgFeedback, setRpgFeedback] = useState("Chọn câu trả lời để tiếp tục nhiệm vụ.");
   const [recording, setRecording] = useState(false);
   const [shadowResult, setShadowResult] = useState("Ready when you are");
@@ -195,6 +204,7 @@ function Home() {
 
   const currentError = errorPresets.find(item => item.id === errorId) ?? errorPresets[0];
   const currentDrama = dramaData.find(item => item.id === dramaId) ?? dramaData[0];
+  const currentJourneyStop = journeyStops.find(item => item.id === journeyStopId) ?? journeyStops[1];
   const currentCard = flashcards[flashIndex];
   const currentPersonaPrompts = promptData[chatPersona];
   const knownError = analyzedText === currentError.input;
@@ -322,7 +332,33 @@ function Home() {
   );
 
   const renderRpg = () => (
-    <div className="page-stack"><SectionHeading eyebrow="STREET SMART · SEOUL SURVIVAL RPG" title="Make the right move in Seoul" detail="Một tình huống. Ba lựa chọn. Kỹ năng dùng được ngay ngoài đời." action={<div className="energy-chip"><HeartPulse size={15} /> Energy <b>{energy}</b></div>} /><div className="rpg-layout"><div className="rpg-story glass-card"><div className="rpg-map"><div className="map-scan" /><span><MapPin size={15} /> INCHEON AIRPORT · T1</span><b>MISSION 01 / 03</b></div><div className="story-content"><div className="story-kicker"><PlaneIcon /> ARRIVAL PROTOCOL</div><h3>T-money, please.</h3><p>Bạn vừa đáp xuống Seoul. Trước khi lên AREX, bạn cần mua một thẻ T-money ở quầy tiện lợi. Nhân viên nhìn bạn chờ câu trả lời.</p><div className="npc-line"><span className="npc-avatar">CS</span><span><small>STAFF</small><b>어떤 카드가 필요하세요?</b><em>Bạn cần loại thẻ nào ạ?</em></span></div><div className="energy-track"><div><span>Motivation / Energy</span><strong>{energy}%</strong></div><MetricBar value={energy} color={energy < 45 ? "coral" : "mint"} /></div></div></div><div className="choice-panel"><div className="eyebrow">YOUR RESPONSE · CHOOSE WISELY</div>{rpgChoices.map((choice, index) => <button key={choice.korean} onClick={() => handleRpgChoice(choice)} className={classNames("choice-card", rpgStep === 1 && "answered", rpgFeedback === choice.feedback && "selected")}><span className="choice-number">0{index + 1}</span><span><b>{choice.korean}</b><small>{choice.vi}</small></span><span className={choice.delta > 0 ? "choice-delta positive" : "choice-delta negative"}>{choice.delta > 0 ? "+" : ""}{choice.delta} energy</span></button>)}<AnimatePresence mode="wait"><motion.div key={rpgFeedback} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rpg-feedback"><div className="feedback-icon"><Lightbulb size={16} /></div><div><span className="eyebrow">TOKKI COACH</span><p>{rpgFeedback}</p></div></motion.div></AnimatePresence><button className="next-mission" onClick={() => { setRpgStep(0); setRpgFeedback("Chọn câu trả lời để tiếp tục nhiệm vụ."); setEnergy(74); }}><RotateCcw size={14} /> Reset mission</button></div></div></div>
+    <div className="page-stack">
+      <SectionHeading eyebrow="STREET SMART · SEOUL JOURNEY" title="Your Korean journey starts here" detail="Đi qua Seoul từng chặng một — mỗi điểm dừng mở ra một tình huống nói được ngay ngoài đời." action={<div className="energy-chip"><HeartPulse size={15} /> Energy <b>{energy}</b></div>} />
+      <div className="journey-layout">
+        <div className="journey-map glass-card">
+          <div className="journey-map-head"><div><div className="eyebrow">SEOUL FIELD GUIDE</div><h3>Mission route <span>01 / 05</span></h3></div><div className="journey-progress"><strong>{journeyStops.filter(stop => stop.status === "complete").length + (journeyStopId === "tmoney" ? 1 : 0)} / 5</strong><small>stops</small></div></div>
+          <div className="journey-road" aria-label="Seoul learning journey">
+            <div className="road-line" />
+            {journeyStops.map((stop, index) => {
+              const isActive = journeyStopId === stop.id;
+              const isLocked = stop.status === "locked";
+              return <button key={stop.id} disabled={isLocked} onClick={() => { setJourneyStopId(stop.id); setRpgStep(0); setRpgFeedback("Chọn câu trả lời để tiếp tục nhiệm vụ."); }} className={classNames("journey-stop", `stop-${index % 2 ? "right" : "left"}`, isActive && "active", stop.status === "complete" && "complete", isLocked && "locked")}>
+                <span className={classNames("journey-pin", stop.accent)}>{isLocked ? <Lock size={14} /> : stop.status === "complete" ? <Check size={15} /> : <Play size={14} fill="currentColor" />}</span>
+                <span className="journey-building" aria-hidden="true"><i /><b /><em /></span>
+                <span className="journey-stop-copy"><small>STOP {stop.step} · {stop.place}</small><strong>{stop.title}</strong><em>{stop.goal}</em></span>
+              </button>;
+            })}
+          </div>
+          <div className="journey-map-footer"><span><span className="route-dot pink" /> active route</span><span><span className="route-dot mint" /> completed</span><span><Lock size={11} /> locked</span></div>
+        </div>
+        <div className="journey-mission">
+          <div className="journey-mission-top"><span className={classNames("mission-location", currentJourneyStop.accent)}><MapPin size={14} /> {currentJourneyStop.place}</span><span className="mission-number">MISSION {currentJourneyStop.step} / 05</span></div>
+          <div className="journey-scene"><div className="scene-sun" /><div className="scene-building building-one" /><div className="scene-building building-two" /><div className="scene-tree tree-one" /><div className="scene-tree tree-two" /><div className="scene-road" /><div className="scene-label-bubble"><span>{currentJourneyStop.goal}</span></div><div className="scene-pin-large"><Play size={18} fill="currentColor" /></div></div>
+          <div className="journey-mission-copy"><div className="story-kicker"><MapPin size={14} /> {currentJourneyStop.korean}</div><h3>{currentJourneyStop.title}</h3><p>{currentJourneyStop.vi} Tokki sẽ giúp bạn chọn câu tự nhiên nhất cho tình huống này.</p><div className="npc-line"><span className="npc-avatar">CS</span><span><small>LOCAL CONTEXT</small><b>{currentJourneyStop.korean}</b><em>{currentJourneyStop.vi}</em></span></div><div className="energy-track"><div><span>Motivation / Energy</span><strong>{energy}%</strong></div><MetricBar value={energy} color={energy < 45 ? "coral" : "mint"} /></div></div>
+          <div className="journey-choice-panel choice-panel"><div className="eyebrow">YOUR RESPONSE · CHOOSE WISELY</div>{rpgChoices.map((choice, index) => <button key={choice.korean} onClick={() => handleRpgChoice(choice)} className={classNames("choice-card", rpgStep === 1 && "answered", rpgFeedback === choice.feedback && "selected")}><span className="choice-number">0{index + 1}</span><span><b>{choice.korean}</b><small>{choice.vi}</small></span><span className={choice.delta > 0 ? "choice-delta positive" : "choice-delta negative"}>{choice.delta > 0 ? "+" : ""}{choice.delta} energy</span></button>)}<AnimatePresence mode="wait"><motion.div key={rpgFeedback} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rpg-feedback"><div className="feedback-icon"><Lightbulb size={16} /></div><div><span className="eyebrow">TOKKI COACH</span><p>{rpgFeedback}</p></div></motion.div></AnimatePresence><button className="next-mission" onClick={() => { setRpgStep(0); setRpgFeedback("Chọn câu trả lời để tiếp tục nhiệm vụ."); setEnergy(74); setJourneyStopId("tmoney"); }}><RotateCcw size={14} /> Reset journey</button></div>
+        </div>
+      </div>
+    </div>
   );
 
   const renderFlashcards = () => (
